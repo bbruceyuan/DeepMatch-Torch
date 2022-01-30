@@ -233,7 +233,10 @@ class BaseModel(nn.Module):
                 with tqdm(enumerate(train_loader), disable=verbose != 1) as t:
                     for _, (x_train, y_train) in t:
                         x = x_train.to(self.device).float()
-                        y = y_train.to(self.device).float()
+                        if self.loss_func == F.cross_entropy:
+                            y = y_train.to(self.device).long()
+                        else:
+                            y = y_train.to(self.device).float()
 
                         y_pred = model(x).squeeze()
                         y_pred = torch.sigmoid(y_pred)
@@ -338,7 +341,7 @@ class BaseModel(nn.Module):
         return np.concatenate(pred_ans).astype("float64")
 
     def input_from_feature_columns(self, X, feature_columns, embedding_dict, support_dense=True):
-
+        
         sparse_feature_columns = list(
             filter(lambda x: isinstance(x, SparseFeat), feature_columns)) if len(feature_columns) else []
         dense_feature_columns = list(
@@ -354,12 +357,10 @@ class BaseModel(nn.Module):
         sparse_embedding_list = [embedding_dict[feat.embedding_name](
             X[:, self.feature_index[feat.name][0]:self.feature_index[feat.name][1]].long()) for
             feat in sparse_feature_columns]
-
         sequence_embed_dict = varlen_embedding_lookup(X, self.embedding_dict, self.feature_index,
                                                       varlen_sparse_feature_columns)
         varlen_sparse_embedding_list = get_varlen_pooling_list(sequence_embed_dict, X, self.feature_index,
                                                                varlen_sparse_feature_columns, self.device)
-
         dense_value_list = [X[:, self.feature_index[feat.name][0]:self.feature_index[feat.name][1]] for feat in
                             dense_feature_columns]
 

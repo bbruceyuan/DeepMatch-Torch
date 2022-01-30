@@ -112,3 +112,32 @@ def gen_model_input_sdm(train_set, user_profile, seq_short_len, seq_prefer_len):
         train_model_input[key] = user_profile.loc[train_model_input['user_id']][key].values
 
     return train_model_input, train_label
+
+def gen_data_set_youteube(data, negsample=5):
+    
+    data.sort_values("timestamp", inplace=True)
+    item_ids = data['movie_id'].unique()
+    
+    train_set = []
+    test_set = []
+    for reviewerID, hist in tqdm(data.groupby('user_id')):
+        pos_list = hist['movie_id'].tolist()
+        rating_list = hist['rating'].tolist()
+
+        if negsample > 0:
+            candidate_set = list(set(item_ids) - set(pos_list))
+            neg_list = np.random.choice(candidate_set,size=len(pos_list)*negsample,replace=True)
+        for i in range(1, len(pos_list)):
+            hist = pos_list[:i]
+            if i != len(pos_list) - 1:
+                # 这里的 label = 1 其实相当于是多分类的 1
+                train_set.append((reviewerID, hist[::-1], [pos_list[i]] + [neg_list[item_idx] for item_idx in np.random.choice(neg_list, negsample)], 0, len(hist[::-1]),rating_list[i]))
+            else:
+                test_set.append((reviewerID, hist[::-1], [pos_list[i]] + [neg_list[item_idx] for item_idx in np.random.choice(neg_list, negsample)], 0,len(hist[::-1]),rating_list[i]))
+    
+    random.shuffle(train_set)
+    random.shuffle(test_set)
+
+    print(len(train_set[0]),len(test_set[0]))
+    
+    return train_set,test_set
