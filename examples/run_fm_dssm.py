@@ -7,7 +7,7 @@ import pandas as pd
 from deepctr_torch.inputs import SparseFeat, VarLenSparseFeat
 from preprocess import gen_data_set, gen_model_input
 from sklearn.preprocessing import LabelEncoder
-from deepmatch_torch.models import FM
+from deepmatch_torch.models import FM, DSSM
 
 
 if __name__ == "__main__":
@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
     # 3.Define Model and train
 
-    model = FM(user_feature_columns, item_feature_columns)  # FM(user_feature_columns,item_feature_columns)
+    model = DSSM(user_feature_columns, item_feature_columns, [128, 52])  # FM(user_feature_columns,item_feature_columns)
 
     model.compile(optimizer='adagrad', loss="binary_crossentropy")
 
