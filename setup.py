@@ -1,10 +1,12 @@
 import setuptools
 
+
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+# 去除了 PyTorch 的依赖，需要用户自己
 REQUIRED_PACKAGES = [
-    'torch>=1.1.0', 'tqdm', 'sklearn'
+    'tqdm', 'sklearn'
 ]
 
 setuptools.setup(
@@ -12,11 +14,11 @@ setuptools.setup(
     version="0.0.1",
     author="bbruceyuan",
     author_email="bruceyuan123@gmail.com",
-    description="DeepMatch_Torch",
+    description="DeepMatch-Torch",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/bbruceyuan/DeepMatch_Torch",
-    download_url='https://github.com/bbruceyuan/DeepMatch_Torch',
+    url="https://github.com/bbruceyuan/DeepMatch-Torch",
+    download_url='https://github.com/bbruceyuan/DeepMatch-Torch',
     packages=setuptools.find_packages(
         exclude=["tests", "tests.models", "tests.layers"]),
     python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*",  # '>=3.4',  # 3.4.6
@@ -26,7 +28,7 @@ setuptools.setup(
     },
     entry_points={
     },
-    classifiers=(
+    classifiers=[
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
         'Intended Audience :: Developers',
@@ -42,8 +44,8 @@ setuptools.setup(
         'Topic :: Software Development',
         'Topic :: Software Development :: Libraries',
         'Topic :: Software Development :: Libraries :: Python Modules',
-    ),
-    license="Apache-2.0",
-    keywords=['match', "deepmatch_torch"
+    ],
+    license="MIT License",
+    keywords=['match', "deepmatch_torch", "deepmatch-torch", "deepmatch-pytorch",
               'deep learning', 'torch', 'tensor', 'pytorch', 'deepmatch'],
 )
