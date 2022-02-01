@@ -1,0 +1,40 @@
+name: CI
+
+on: 
+  push:
+    path:
+      - 'deepmatch_torch/*'
+      - 'tests/*'
+  pull_request:
+    path:
+      - 'deepmatch_torch/*'
+      - 'tests/*'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        python-version: [3.5,3.6,3.7]
+        tf-version: [1.4.0,1.14.0,2.1.0,2.2.0,2.3.0]
+
+        exclude:
+          - python-version: 3.7
+            tf-version: 1.4.0
+
+    steps:
+
+    - uses: actions/checkout@v1
+
+    - name: Setup python environment
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        pip3 install -q tensorflow==${{ matrix.tf-version }}
+        pip install -q requests
+        pip install -e .

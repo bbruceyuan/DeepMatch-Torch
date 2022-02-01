@@ -1,4 +1,3 @@
-from typing import final
 from .BaseModel import BaseModel
 from deepctr_torch.layers import DNN
 from deepctr_torch.inputs import SparseFeat, DenseFeat, VarLenSparseFeat
@@ -6,7 +5,7 @@ from deepctr_torch.inputs import get_varlen_pooling_list, varlen_embedding_looku
 from ..utils import combined_dnn_input
 from ..inputs import create_embedding_matrix
 import torch.nn.functional as F
-from ..layers.core import CapsuleLayer, LabelAwareAttention
+from ..layers.core import CapsuleLayer
 import torch
 
 
