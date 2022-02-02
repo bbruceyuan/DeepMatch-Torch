@@ -58,13 +58,27 @@ if __name__ == "__main__":
 
     # 3.Define Model and train
 
-    model = DSSM(user_feature_columns, item_feature_columns, [128, 52])  # FM(user_feature_columns,item_feature_columns)
+    model = DSSM(user_feature_columns, 
+        item_feature_columns, 
+        dnn_hidden_units=[128, 52],
+        optimizer='Adam',
+        config={
+            'device': 'cpu'
+            }
+        )  
+    # model = FM(user_feature_columns, 
+    #     item_feature_columns, 
+    #     optimizer='Adam',
+    #     config={
+    #         'device': 'cpu'
+    #     }
 
-    model.compile(optimizer='adagrad', loss="binary_crossentropy")
-
-    history = model.fit(train_model_input, train_label,  # train_label,
-                        batch_size=256*3, epochs=1, verbose=1, validation_split=0.0, config={})
-
+    #     )  
+    
+    model.fit(train_model_input, train_label, 
+                        max_epochs=10, batch_size=128 )
+    
+    exit(1)
     # 4. Generate user features for testing and full item features for retrieval
     # test_user_model_input = test_model_input
     # all_item_model_input = {"movie_id": item_profile['movie_id'].values}

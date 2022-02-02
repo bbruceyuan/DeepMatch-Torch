@@ -55,17 +55,24 @@ if __name__ == "__main__":
 
     # 3.Define Model and train
 
-    model = NCF(user_feature_columns, item_feature_columns,  user_gmf_embedding_dim=20,
-                item_gmf_embedding_dim=20, user_mlp_embedding_dim=32, item_mlp_embedding_dim=32,
-                dnn_hidden_units=[128, 64, 32],)  
-    # model = FM(user_feature_columns,item_feature_columns)
-    # model = DSSM(user_feature_columns, item_feature_columns, [128, 52])
+    model = NCF(
+        user_feature_columns, 
+        item_feature_columns,  
+        user_gmf_embedding_dim=20,
+        item_gmf_embedding_dim=20, 
+        user_mlp_embedding_dim=32, 
+        item_mlp_embedding_dim=32,
+        dnn_hidden_units=[128, 64, 32],
+        optimizer='Adam',
+        config={
+            'device': 'cpu'
+            }
+    )  
 
-
-    model.compile(optimizer='adagrad', loss="binary_crossentropy")
-
-    history = model.fit(train_model_input, train_label,  # train_label,
-                        batch_size=256*3, epochs=1, verbose=1, validation_split=0.0, )
+    model.fit(train_model_input, train_label, 
+                        max_epochs=10, batch_size=128 )
+    # model.fit(train_model_input, train_label,  # train_label,
+                        # batch_size=256*3, epochs=1, verbose=1, validation_split=0.0, )
     # print(model.item_embedding.shape)
     # print(model.user_embedding.shape)
     # # 4. Generate user features for testing and full item features for retrieval
