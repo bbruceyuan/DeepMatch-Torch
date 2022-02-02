@@ -73,7 +73,8 @@ if __name__ == "__main__":
                     criterion=F.cross_entropy,
                 optimizer='Adam',    
                 config={
-                    'device': 'cpu'
+                    'device': 'cpu',
+                    "gpus": 0
                 }
     )  
 
