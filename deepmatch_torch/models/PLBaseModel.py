@@ -98,14 +98,13 @@ class PLBaseModel(LightningModule):
         super().__init__()
         self.user_feature_columns = user_feature_columns
         self.item_feature_columns = item_feature_columns
-
         # DeepMatch side 用于增加兼容
         self.config = config  # 增加 config 用于设置 DeepMatch 侧需要的参数
         # 优先使用 kwargs 的配置
 
         # TODO: 以后要消灭所有的 device , 
         self.config.update(kwargs)
-        
+
         self.linear_feature_columns = item_feature_columns + user_feature_columns
         self.dnn_feature_columns = self.linear_feature_columns 
 
@@ -132,6 +131,7 @@ class PLBaseModel(LightningModule):
         self.criterion = criterion
         self.criterion_args = criterion_args
         self.scaler = scaler
+        self.gpus = self.config.get("gpus", 0)
 
         # 增加了选择 optimizer 的方式
         optimizer = self.init_optimizer(optimizer)
@@ -157,7 +157,7 @@ class PLBaseModel(LightningModule):
         
         dataset = TensorDataset(x, y)
         loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-        trainer = Trainer(max_epochs=max_epochs, gpus=1)
+        trainer = Trainer(max_epochs=max_epochs, gpus=self.gpus)
         trainer.fit(self, loader)
 
     def prepare_batch(self, batch):

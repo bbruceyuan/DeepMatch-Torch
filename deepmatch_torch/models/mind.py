@@ -1,4 +1,4 @@
-from .BaseModel import BaseModel
+from .PLBaseModel import PLBaseModel
 from deepctr_torch.layers import DNN
 from deepctr_torch.inputs import SparseFeat, DenseFeat, VarLenSparseFeat
 from deepctr_torch.inputs import get_varlen_pooling_list, varlen_embedding_lookup
@@ -9,17 +9,17 @@ from ..layers.core import CapsuleLayer
 import torch
 
 
-class MIND(BaseModel):
+class MIND(PLBaseModel):
     def __init__(self, user_feature_columns, item_feature_columns, 
                 num_sampled=5, user_dnn_hidden_units=[64, 32], 
                 dnn_activation='relu', dnn_use_bn=False,
                 dynamic_k=False, p=1, k_max=2,
                 device="cpu", init_std=0.002,
                l2_reg_dnn=0, l2_reg_embedding=1e-6, 
-               dnn_dropout=0, activation='relu', seed=1024):
+               dnn_dropout=0, activation='relu', seed=1024, **kwargs):
         super(MIND, self).__init__(user_feature_columns, item_feature_columns, 
                 l2_reg_linear=1e-5, l2_reg_embedding=1e-5,
-                init_std=0.0001, seed=1024, task='binary', device='cpu', gpus=None)
+                init_std=0.0001, seed=1024, task='binary', device='cpu', **kwargs)
         self.num_sampled = num_sampled
         self.pow_p = 2
         self.capsule_layer = CapsuleLayer(user_feature_columns[0].embedding_dim, 1, 

@@ -13,8 +13,8 @@ class NCF(PLBaseModel):
                 user_mlp_embedding_dim=20, item_mlp_embedding_dim=20, dnn_use_bn=False,
                 dnn_hidden_units=[64, 32], dnn_activation='relu', l2_reg_dnn=0,
                 dnn_dropout=0,
-                l2_reg_linear=0.00001, l2_reg_embedding=0.00001, init_std=0.0001, seed=1024, task='binary', device='cpu', gpus=None, **kwargs):
-        super().__init__(user_feature_columns, item_feature_columns, l2_reg_linear=l2_reg_linear, l2_reg_embedding=l2_reg_embedding, init_std=init_std, seed=seed, task=task, device=device, gpus=gpus, **kwargs)
+                l2_reg_linear=0.00001, l2_reg_embedding=0.00001, init_std=0.0001, seed=1024, task='binary', device='cpu', **kwargs):
+        super().__init__(user_feature_columns, item_feature_columns, l2_reg_linear=l2_reg_linear, l2_reg_embedding=l2_reg_embedding, init_std=init_std, seed=seed, task=task, device=device, **kwargs)
         
         if len(user_feature_columns) > 1 or len(item_feature_columns) > 1:
             raise ValueError("目前 NCF 只支持 UserId 和 ItemId 作为特征")
@@ -32,7 +32,6 @@ class NCF(PLBaseModel):
         self.seed = seed
         self.task = task 
         # self.device = device
-        self.gpus = gpus
 
         # 计算模型的复杂度
         self.user_gmf_embedding_dim = user_gmf_embedding_dim
