@@ -16,7 +16,7 @@ class CommonDataSet(Dataset):
     def __len__(self):
         return len(self.data)
 
-
+# copy from DeepMatch and remove device
 def create_embedding_matrix(feature_columns, init_std=0.001, linear=False, sparse=False, device='cpu'):
     # Return nn.ModuleDict: for sparse features, {embedding_name: nn.Embedding}
     # for varlen sparse features, {embedding_name: nn.EmbeddingBag}
@@ -34,11 +34,11 @@ def create_embedding_matrix(feature_columns, init_std=0.001, linear=False, spars
          sparse_feature_columns + varlen_sparse_feature_columns}
     )
 
-    for feat in varlen_sparse_feature_columns:
-        embedding_dict[feat.embedding_name] = nn.EmbeddingBag(
-            feat.vocabulary_size, feat.embedding_dim, sparse=sparse, mode=feat.combiner)
+    # for feat in varlen_sparse_feature_columns:
+    #     embedding_dict[feat.embedding_name] = nn.EmbeddingBag(
+    #         feat.dimension, embedding_size, sparse=sparse, mode=feat.combiner)
 
     for tensor in embedding_dict.values():
         nn.init.normal_(tensor.weight, mean=0, std=init_std)
 
-    return embedding_dict.to(device)
+    return embedding_dict
