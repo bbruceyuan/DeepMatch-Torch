@@ -3,18 +3,18 @@ from deepctr_torch.inputs import create_embedding_matrix
 from deepctr_torch.inputs  import SparseFeat, DenseFeat, build_input_features
 from deepctr_torch.layers.core import DNN
 
-from .BaseModel import BaseModel
+from .PLBaseModel import PLBaseModel
 from ..utils import combined_dnn_input
 
 
-class NCF(BaseModel):
+class NCF(PLBaseModel):
     def __init__(self, user_feature_columns, item_feature_columns, 
                 user_gmf_embedding_dim=20, item_gmf_embedding_dim=20,
                 user_mlp_embedding_dim=20, item_mlp_embedding_dim=20, dnn_use_bn=False,
                 dnn_hidden_units=[64, 32], dnn_activation='relu', l2_reg_dnn=0,
                 dnn_dropout=0,
-                l2_reg_linear=0.00001, l2_reg_embedding=0.00001, init_std=0.0001, seed=1024, task='binary', device='cpu', gpus=None):
-        super().__init__(user_feature_columns, item_feature_columns, l2_reg_linear=l2_reg_linear, l2_reg_embedding=l2_reg_embedding, init_std=init_std, seed=seed, task=task, device=device, gpus=gpus)
+                l2_reg_linear=0.00001, l2_reg_embedding=0.00001, init_std=0.0001, seed=1024, task='binary', device='cpu', gpus=None, **kwargs):
+        super().__init__(user_feature_columns, item_feature_columns, l2_reg_linear=l2_reg_linear, l2_reg_embedding=l2_reg_embedding, init_std=init_std, seed=seed, task=task, device=device, gpus=gpus, **kwargs)
         
         if len(user_feature_columns) > 1 or len(item_feature_columns) > 1:
             raise ValueError("目前 NCF 只支持 UserId 和 ItemId 作为特征")
@@ -31,7 +31,7 @@ class NCF(BaseModel):
         self.l2_reg_linear = l2_reg_linear
         self.seed = seed
         self.task = task 
-        self.device = device
+        # self.device = device
         self.gpus = gpus
 
         # 计算模型的复杂度
@@ -98,4 +98,5 @@ class NCF(BaseModel):
         neumf_input = combined_dnn_input([gmf_out, mlp_out])
 
         neumf_out = self.predict_layer(neumf_input)
+        neumf_out = neumf_out.squeeze()
         return neumf_out

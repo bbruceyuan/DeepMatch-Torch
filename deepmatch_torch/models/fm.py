@@ -1,12 +1,14 @@
 import torch
 
-from .BaseModel import BaseModel
+from .PLBaseModel import PLBaseModel
 from ..layers import FactorizationMachines
 
 
-class FM(BaseModel):
-    def __init__(self, user_feature_columns, item_feature_columns, l2_reg_linear=0.00001, l2_reg_embedding=0.00001, init_std=0.0001, seed=1024, task='binary', device='cpu', gpus=None):
-        super().__init__(user_feature_columns, item_feature_columns, l2_reg_linear=l2_reg_linear, l2_reg_embedding=l2_reg_embedding, init_std=init_std, seed=seed, task=task, device=device, gpus=gpus)
+class FM(PLBaseModel):
+    def __init__(self, user_feature_columns, item_feature_columns, 
+        l2_reg_linear=0.00001, l2_reg_embedding=0.00001, init_std=0.0001, 
+        seed=1024, task='binary', device='cpu', gpus=None, **kwargs):
+        super().__init__(user_feature_columns, item_feature_columns, l2_reg_linear=l2_reg_linear, l2_reg_embedding=l2_reg_embedding, init_std=init_std, seed=seed, task=task, device=device, gpus=gpus, **kwargs)
         self.fm = FactorizationMachines()
 
     def forward(self, X):
@@ -22,4 +24,5 @@ class FM(BaseModel):
 
         res = linear_logit + fm_logit
         # shape is (batch_size, 1) predict 部分进行了 squeeze 
+        res = res.squeeze()
         return res

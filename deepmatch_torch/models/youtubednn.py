@@ -1,4 +1,4 @@
-from .BaseModel import BaseModel
+from .PLBaseModel import PLBaseModel
 from deepctr_torch.layers import DNN
 from deepctr_torch.inputs import SparseFeat, DenseFeat, VarLenSparseFeat
 from deepctr_torch.inputs import get_varlen_pooling_list, varlen_embedding_lookup
@@ -8,16 +8,16 @@ import torch.nn.functional as F
 
 
 # youtube dnn 的结构没有什么改变
-class YouTubeDNN(BaseModel):
+class YouTubeDNN(PLBaseModel):
     def __init__(self, user_feature_columns, item_feature_columns, 
                 num_sampled=5, user_dnn_hidden_units=[64, 32], 
                 dnn_activation='relu', dnn_use_bn=False,
                 device="cpu", init_std=0.002,
                l2_reg_dnn=0, l2_reg_embedding=1e-6, 
-               dnn_dropout=0, activation='relu', seed=1024):
+               dnn_dropout=0, activation='relu', seed=1024, **kwargs):
         super(YouTubeDNN, self).__init__(user_feature_columns, item_feature_columns, 
                 l2_reg_linear=1e-5, l2_reg_embedding=1e-5,
-                init_std=0.0001, seed=1024, task='binary', device='cpu', gpus=None)
+                init_std=0.0001, seed=1024, task='binary', device='cpu', gpus=None, **kwargs)
         self.num_sampled = num_sampled
 
         self.user_dnn = DNN(self.compute_input_dim(user_feature_columns), user_dnn_hidden_units,
@@ -30,7 +30,6 @@ class YouTubeDNN(BaseModel):
         
         user_dnn_input = combined_dnn_input(user_sparse_embedding_list, user_dense_value_list)
         user_embedding = self.user_dnn(user_dnn_input)  # (batch_size, embedding_dim)
-
         user_embedding = user_embedding.unsqueeze(1) # (batch, 1, embedding_dim)
 
         item_embedding_list, _ = self.input_from_item_feature_columns(X, self.item_feature_columns, self.embedding_dict)

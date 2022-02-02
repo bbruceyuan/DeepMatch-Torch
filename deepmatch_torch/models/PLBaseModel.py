@@ -1,7 +1,3 @@
-# TODO: 后续需要修改成 pytorch_lightning 的接口
-"""
-revised by: BBruceyuan
-"""
 from abc import abstractmethod
 from functools import partial
 
@@ -9,6 +5,7 @@ import torch.nn.functional as F
 from pytorch_lightning import LightningModule, Trainer
 from torch.utils.data import DataLoader, TensorDataset
 
+import numpy as np
 import torch
 import torch.nn as nn
 from deepctr_torch.inputs import build_input_features
@@ -17,12 +14,64 @@ from deepctr_torch.inputs import SparseFeat, DenseFeat, VarLenSparseFeat
 from ..inputs import create_embedding_matrix
 
 
-# 增加了一个 config 用于扩展
+# DeepMatch_Torch Linear Model
+class Linear(nn.Module):
+    def __init__(self, feature_columns, feature_index, init_std=0.0001, device='cpu'):
+        super(Linear, self).__init__()
+        self.my_device = device
+        self.feature_index = feature_index
+        self.sparse_feature_columns = list(
+            filter(lambda x: isinstance(x, SparseFeat), feature_columns)) if len(feature_columns) else []
+        self.dense_feature_columns = list(
+            filter(lambda x: isinstance(x, DenseFeat), feature_columns)) if len(feature_columns) else []
+
+        self.varlen_sparse_feature_columns = list(
+            filter(lambda x: isinstance(x, VarLenSparseFeat), feature_columns)) if len(feature_columns) else []
+
+        self.embedding_dict = create_embedding_matrix(feature_columns, init_std, linear=True, sparse=False,)
+        for tensor in self.embedding_dict.values():
+            nn.init.normal_(tensor.weight, mean=0, std=init_std)
+
+        if len(self.dense_feature_columns) > 0:
+            self.weight = nn.Parameter(torch.Tensor(sum(fc.dimension for fc in self.dense_feature_columns), 1))
+            torch.nn.init.normal_(self.weight, mean=0, std=init_std)
+
+    def forward(self, X, sparse_feat_refine_weight=None):
+
+        sparse_embedding_list = [self.embedding_dict[feat.embedding_name](
+            X[:, self.feature_index[feat.name][0]:self.feature_index[feat.name][1]].long()) for
+            feat in self.sparse_feature_columns]
+
+        dense_value_list = [X[:, self.feature_index[feat.name][0]:self.feature_index[feat.name][1]] for feat in
+                            self.dense_feature_columns]
+
+        sequence_embed_dict = varlen_embedding_lookup(X, self.embedding_dict, self.feature_index,
+                                                      self.varlen_sparse_feature_columns)
+        varlen_embedding_list = get_varlen_pooling_list(sequence_embed_dict, X, self.feature_index,
+                                                        self.varlen_sparse_feature_columns, self.my_device)
+
+        sparse_embedding_list += varlen_embedding_list
+
+        linear_logit = torch.zeros([X.shape[0], 1]).to(sparse_embedding_list[0].device)
+        if len(sparse_embedding_list) > 0:
+            sparse_embedding_cat = torch.cat(sparse_embedding_list, dim=-1)
+            if sparse_feat_refine_weight is not None:
+                sparse_embedding_cat = sparse_embedding_cat * sparse_feat_refine_weight.unsqueeze(1)
+            sparse_feat_logit = torch.sum(sparse_embedding_cat, dim=-1, keepdim=False)
+            linear_logit += sparse_feat_logit
+        if len(dense_value_list) > 0:
+            dense_value_logit = torch.cat(
+                dense_value_list, dim=-1).matmul(self.weight)
+            linear_logit += dense_value_logit
+
+        return linear_logit
+
+
+# 使用 Pl 作为 fit 的接口
 class PLBaseModel(LightningModule):
     """Base class for all DeepMatch_Torch models.
+    This model inspired from: https://github.com/Rose-STL-Lab/torchTS/blob/main/torchts/nn/model.py
     Args:
-        user_feature_columns (feature_columns): user side feature
-        item_feature_columns (feature_columns): item side feature column
         optimizer (torch.optim.Optimizer): Optimizer
         opimizer_args (dict): Arguments for the optimizer
         criterion: Loss function
@@ -30,32 +79,32 @@ class PLBaseModel(LightningModule):
         scheduler (torch.optim.lr_scheduler): Learning rate scheduler
         scheduler_args (dict): Arguments for the scheduler
         scaler (torchts.utils.scaler.Scaler): Scaler
-        config (Dict): BaseModel config, used to future extentions
     """
 
     def __init__(
         self,
-        user_feature_columns, 
+        user_feature_columns,
         item_feature_columns,
-        optimizer,
+        optimizer=None,
         optimizer_args=None,
         criterion=F.mse_loss,
         criterion_args=None,
         scheduler=None,
         scheduler_args=None,
         scaler=None,
-        config=None,
+        config={},
         **kwargs,
     ):
         super().__init__()
+        self.user_feature_columns = user_feature_columns
+        self.item_feature_columns = item_feature_columns
+
         # DeepMatch side 用于增加兼容
         self.config = config  # 增加 config 用于设置 DeepMatch 侧需要的参数
         # 优先使用 kwargs 的配置
+
         # TODO: 以后要消灭所有的 device , 
-        self.device = config.get('device')
         self.config.update(kwargs)
-        self.user_feature_columns = user_feature_columns
-        self.item_feature_columns = item_feature_columns
         
         self.linear_feature_columns = item_feature_columns + user_feature_columns
         self.dnn_feature_columns = self.linear_feature_columns 
@@ -71,7 +120,7 @@ class PLBaseModel(LightningModule):
                     self.config.get("init_std"), sparse=False, )
 
         self.linear_model = Linear(
-            self.linear_feature_columns, self.feature_index, )
+            self.linear_feature_columns, self.feature_index, device=self.device)
 
         self.regularization_weight = []
 
@@ -79,12 +128,13 @@ class PLBaseModel(LightningModule):
             l2=self.config.get("l2_reg_embedding"))
         self.add_regularization_weight(self.linear_model.parameters(), 
             l2=self.config.get("l2_reg_linear"))
-        # DeepMatch 兼容 end
 
         self.criterion = criterion
         self.criterion_args = criterion_args
         self.scaler = scaler
 
+        # 增加了选择 optimizer 的方式
+        optimizer = self.init_optimizer(optimizer)
         if optimizer_args is not None:
             self.optimizer = partial(optimizer, **optimizer_args)
         else:
@@ -103,9 +153,11 @@ class PLBaseModel(LightningModule):
             max_epochs (int): Number of training epochs
             batch_size (int): Batch size for torch.utils.data.DataLoader
         """
+        x, y = self.construct_input(x, y)
+        
         dataset = TensorDataset(x, y)
         loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-        trainer = Trainer(max_epochs=max_epochs)
+        trainer = Trainer(max_epochs=max_epochs, gpus=1)
         trainer.fit(self, loader)
 
     def prepare_batch(self, batch):
@@ -126,22 +178,20 @@ class PLBaseModel(LightningModule):
         else:
             batches_seen = batch_idx
 
-        pred = self(x, y, batches_seen)
+        pred = self(x)
 
         if self.scaler is not None:
             y = self.scaler.inverse_transform(y)
             pred = self.scaler.inverse_transform(pred)
 
-        # TODO: 需要考虑 模型 predict 是什么格式，也许 需要 squeeze
+        # 假设是 softmax, 应该把 y 设置为 Long类型
+        if self.criterion == F.cross_entropy:
+            y = y.long()
         if self.criterion_args is not None:
             loss = self.criterion(pred, y, **self.criterion_args)
         else:
             loss = self.criterion(pred, y)
 
-        # 在 推荐系统中需要增加 reg loss 和 其他的 loss
-        reg_loss = self.get_regularization_loss()
-        # TODO: 增加 aux loss 
-        loss = loss + reg_loss
         return loss
 
     def training_step(self, batch, batch_idx):
@@ -182,7 +232,7 @@ class PLBaseModel(LightningModule):
         return test_loss
 
     @abstractmethod
-    def forward(self, x, y=None, batches_seen=None):
+    def forward(self, x):
         """Forward pass.
         Args:
             x (torch.Tensor): Input data
@@ -211,8 +261,36 @@ class PLBaseModel(LightningModule):
             return [optimizer], [scheduler]
 
         return optimizer
-    
-    # deepmatch methods
+
+    def init_optimizer(self, optimizer_or_name):
+        """init_optimizer 假设 optimizer 是一个string, 那么返回 torch.optim对应的 optimizer
+            否则，返回自己
+        Args:
+            optimizer_or_name ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        if isinstance(optimizer_or_name, str):
+            if optimizer_or_name == "Adam":
+                return torch.optim.Adam
+            elif optimizer_or_name == "SGD":
+                return torch.optim.SGD
+        else:
+            return optimizer_or_name
+            
+    def construct_input(self, x, y):
+        # 有可能直接输出的就是 tensor
+        if isinstance(x, dict):
+            x = [x[feature] for feature in self.feature_index]
+        
+        for i in range(len(x)):
+            if len(x[i].shape) == 1:
+                x[i] = np.expand_dims(x[i], axis=1)
+        x = torch.from_numpy(np.concatenate(x, axis=-1))
+        y = torch.tensor(y, dtype=torch.float32)
+        return x, y
+
     def add_regularization_weight(self, weight_list, l1=0.0, l2=0.0):
         # For a Parameter, put it in a list to keep Compatible with get_regularization_loss()
         if isinstance(weight_list, torch.nn.parameter.Parameter):
@@ -286,53 +364,3 @@ class PLBaseModel(LightningModule):
         if include_dense:
             input_dim += dense_input_dim
         return input_dim
-
-class Linear(nn.Module):
-    def __init__(self, feature_columns, feature_index, init_std=0.0001):
-        super(Linear, self).__init__()
-        self.feature_index = feature_index
-        self.sparse_feature_columns = list(
-            filter(lambda x: isinstance(x, SparseFeat), feature_columns)) if len(feature_columns) else []
-        self.dense_feature_columns = list(
-            filter(lambda x: isinstance(x, DenseFeat), feature_columns)) if len(feature_columns) else []
-
-        self.varlen_sparse_feature_columns = list(
-            filter(lambda x: isinstance(x, VarLenSparseFeat), feature_columns)) if len(feature_columns) else []
-
-        self.embedding_dict = create_embedding_matrix(feature_columns, init_std, linear=True, sparse=False,)
-        for tensor in self.embedding_dict.values():
-            nn.init.normal_(tensor.weight, mean=0, std=init_std)
-
-        if len(self.dense_feature_columns) > 0:
-            self.weight = nn.Parameter(torch.Tensor(sum(fc.dimension for fc in self.dense_feature_columns), 1))
-            torch.nn.init.normal_(self.weight, mean=0, std=init_std)
-
-    def forward(self, X, sparse_feat_refine_weight=None):
-
-        sparse_embedding_list = [self.embedding_dict[feat.embedding_name](
-            X[:, self.feature_index[feat.name][0]:self.feature_index[feat.name][1]].long()) for
-            feat in self.sparse_feature_columns]
-
-        dense_value_list = [X[:, self.feature_index[feat.name][0]:self.feature_index[feat.name][1]] for feat in
-                            self.dense_feature_columns]
-
-        sequence_embed_dict = varlen_embedding_lookup(X, self.embedding_dict, self.feature_index,
-                                                      self.varlen_sparse_feature_columns)
-        varlen_embedding_list = get_varlen_pooling_list(sequence_embed_dict, X, self.feature_index,
-                                                        self.varlen_sparse_feature_columns, self.device)
-
-        sparse_embedding_list += varlen_embedding_list
-
-        linear_logit = torch.zeros([X.shape[0], 1]).to(sparse_embedding_list[0].device)
-        if len(sparse_embedding_list) > 0:
-            sparse_embedding_cat = torch.cat(sparse_embedding_list, dim=-1)
-            if sparse_feat_refine_weight is not None:
-                sparse_embedding_cat = sparse_embedding_cat * sparse_feat_refine_weight.unsqueeze(1)
-            sparse_feat_logit = torch.sum(sparse_embedding_cat, dim=-1, keepdim=False)
-            linear_logit += sparse_feat_logit
-        if len(dense_value_list) > 0:
-            dense_value_logit = torch.cat(
-                dense_value_list, dim=-1).matmul(self.weight)
-            linear_logit += dense_value_logit
-
-        return linear_logit

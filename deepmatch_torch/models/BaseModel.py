@@ -4,7 +4,7 @@ https://github.com/shenweichen/DeepCTR-Torch/blob/b4d8181e86c2165722fa9331bc1618
 Author:
     Weichen Shen,weichenswc@163.com
 
-changed By Chaofa Yuan
+changed By BBruceyuan
 """
 from __future__ import print_function
 
