@@ -63,7 +63,7 @@ if __name__ == "__main__":
         dnn_hidden_units=[128, 52],
         optimizer='Adam',
         config={
-            'device': 'cpu'
+            'device': 'cuda:0'
             }
         )  
     # model = FM(user_feature_columns, 

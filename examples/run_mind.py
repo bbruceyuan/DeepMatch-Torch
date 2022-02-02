@@ -9,6 +9,7 @@ from preprocess import gen_data_set_youteube, gen_model_input, gen_data_set
 from sklearn.preprocessing import LabelEncoder
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.models import Model
+import torch.nn.functional as F 
 
 
 if __name__ == "__main__":
@@ -68,12 +69,20 @@ if __name__ == "__main__":
     # model = YouTubeDNN(user_feature_columns, item_feature_columns, num_sampled=5, user_dnn_hidden_units=(64, embedding_dim))
     model = MIND(user_feature_columns,item_feature_columns,
                     dynamic_k=False, p=1, k_max=2, num_sampled=5,
-                    user_dnn_hidden_units=(64, embedding_dim))
+                    user_dnn_hidden_units=(64, embedding_dim),
+                    criterion=F.cross_entropy,
+                optimizer='Adam',    
+                config={
+                    'device': 'cpu'
+                }
+    )  
 
+    model.fit(train_model_input, train_label, 
+                        max_epochs=10, batch_size=128 )
     # model.compile(optimizer="adam", loss=sampledsoftmaxloss)  # "binary_crossentropy")
-    model.compile(optimizer='adagrad', loss="cross_entropy")
-    history = model.fit(train_model_input, train_label,  # train_label,
-                        batch_size=227, epochs=1, verbose=1, validation_split=0.0, )
+    # model.compile(optimizer='adagrad', loss="cross_entropy")
+    # history = model.fit(train_model_input, train_label,  # train_label,
+                        # batch_size=227, epochs=1, verbose=1, validation_split=0.0, )
 
     exit(1)
     # 4. Generate user features for testing and full item features for retrieval
