@@ -2,7 +2,11 @@
 
 ![Python Version](https://img.shields.io/badge/Python-3.5%2B-green)
 ![PyTorch Version](https://img.shields.io/badge/PyTorch-1.1%2B-green)
+![PyTorch-Lightning](https://img.shields.io/badge/PyTorch--Lightning-1.5%2B-green)
 ![PyPI](https://img.shields.io/pypi/v/deepmatch-torch)
+
+
+[DeepMatch-Torch](https://github.com/bbruceyuan/DeepMatch-Torch) is a `PyTorch` version of [DeepMatch](https://github.com/shenweichen/DeepMatch).
 
 
 [DeepMatch-Torch](https://github.com/bbruceyuan/DeepMatch-Torch) is a PyTorch Version deep matching model library for recommendations & advertising. It's easy to **train models** and to **export representation vectors** for user and item which can be used for **ANN search**. You can use any complex model with `model.fit()` and `model.predict()`. And you can keep same habit of using DeepMatch.
