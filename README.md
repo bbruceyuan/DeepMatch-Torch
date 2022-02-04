@@ -49,6 +49,16 @@ python run_youtubednn.py or run_fm_dssm.py
 | [MIND](https://github.com/bbruceyuan/DeepMatch-Torch/blob/main/deepmatch_torch/models/mind.py) | [CIKM 2019][Multi-interest network with dynamic routing for recommendation at Tmall](https://arxiv.org/pdf/1904.08030)  |
 
 
+## TODO
+- [ ] simplify model config. now only support kwargs, but config is a elegant choice.
+- [ ] fix `MIND` only support CPU train bug.
+
+
+## Acknowledgments
+Especially thanks to [DeepMatch](https://github.com/shenweichen/DeepMatch). This project relies highly on DeepMatch. Additionally, I used the `PLBaseModel` design from [torchTS](https://github.com/Rose-STL-Lab/torchTS).
+
+Thanks to this awesome projects.
+
 ## 中文 README
 
 [DeepMatch-Torch](https://github.com/bbruceyuan/DeepMatch-Torch) 是一个 `PyTorch` 版本的 [DeepMatch](https://github.com/shenweichen/DeepMatch)。
