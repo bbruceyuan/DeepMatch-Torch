@@ -58,23 +58,36 @@ if __name__ == "__main__":
 
     # 3.Define Model and train
 
-    model = DSSM(user_feature_columns, item_feature_columns, [128, 52])  # FM(user_feature_columns,item_feature_columns)
-
-    model.compile(optimizer='adagrad', loss="binary_crossentropy")
-
-    history = model.fit(train_model_input, train_label,  # train_label,
-                        batch_size=256*3, epochs=1, verbose=1, validation_split=0.0, config={})
-
+    # model = DSSM(user_feature_columns, 
+    #     item_feature_columns, 
+    #     dnn_hidden_units=[128, 52],
+    #     optimizer='Adam',
+    #     config={
+    #         'gpus': 1
+    #         }
+    #     )  
+    model = FM(user_feature_columns, 
+        item_feature_columns, 
+        optimizer='Adam',
+        config={
+            'gpus': '1'
+        }
+    )  
+    
+    model.fit(train_model_input, train_label, 
+                        max_epochs=1, batch_size=128 )
+    
     # 4. Generate user features for testing and full item features for retrieval
-    # test_user_model_input = test_model_input
-    # all_item_model_input = {"movie_id": item_profile['movie_id'].values}
+    test_user_model_input = test_model_input
+    model.mode = "user_representation"
+    user_embedding_model = model
 
-    # user_embedding_model = Model(inputs=model.user_input, outputs=model.user_embedding)
-    # item_embedding_model = Model(inputs=model.item_input, outputs=model.item_embedding)
+    user_embs = user_embedding_model.full_predict(test_user_model_input, batch_size=2)
+    print(user_embs.shape)
 
-    # user_embs = user_embedding_model.predict(test_user_model_input, batch_size=2 ** 12)
-    # item_embs = item_embedding_model.predict(all_item_model_input, batch_size=2 ** 12)
-
-    # print(user_embs.shape)
-    # print(item_embs.shape)
-
+    model.mode = "item_representation"
+    all_item_model_input = {"movie_id": item_profile['movie_id'].values}
+    item_embedding_model = model.rebuild_feature_index(item_feature_columns)
+    item_embs = item_embedding_model.full_predict(all_item_model_input, batch_size=2 ** 12)
+    print(item_embs.shape)
+    

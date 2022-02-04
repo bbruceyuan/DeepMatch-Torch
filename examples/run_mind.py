@@ -85,20 +85,32 @@ if __name__ == "__main__":
     # history = model.fit(train_model_input, train_label,  # train_label,
                         # batch_size=227, epochs=1, verbose=1, validation_split=0.0, )
 
-    exit(1)
     # 4. Generate user features for testing and full item features for retrieval
     test_user_model_input = test_model_input
-    all_item_model_input = {"movie_id": item_profile['movie_id'].values}
+    model.mode = "user_representation"
+    user_embedding_model = model
 
-    user_embedding_model = Model(inputs=model.user_input, outputs=model.user_embedding)
-    item_embedding_model = Model(inputs=model.item_input, outputs=model.item_embedding)
-
-    user_embs = user_embedding_model.predict(test_user_model_input, batch_size=2 ** 12)
-    # user_embs = user_embs[:, i, :]  # i in [0,k_max) if MIND
-    item_embs = item_embedding_model.predict(all_item_model_input, batch_size=2 ** 12)
-
+    user_embs = user_embedding_model.full_predict(test_user_model_input, batch_size=2)
     print(user_embs.shape)
+
+    model.mode = "item_representation"
+    all_item_model_input = {"movie_id": item_profile['movie_id'].values}
+    item_embedding_model = model.rebuild_feature_index(item_feature_columns)
+    item_embs = item_embedding_model.full_predict(all_item_model_input, batch_size=2 ** 12)
     print(item_embs.shape)
+    
+    # test_user_model_input = test_model_input
+    # all_item_model_input = {"movie_id": item_profile['movie_id'].values}
+
+    # user_embedding_model = Model(inputs=model.user_input, outputs=model.user_embedding)
+    # item_embedding_model = Model(inputs=model.item_input, outputs=model.item_embedding)
+
+    # user_embs = user_embedding_model.predict(test_user_model_input, batch_size=2 ** 12)
+    # # user_embs = user_embs[:, i, :]  # i in [0,k_max) if MIND
+    # item_embs = item_embedding_model.predict(all_item_model_input, batch_size=2 ** 12)
+
+    # print(user_embs.shape)
+    # print(item_embs.shape)
 
     # 5. [Optional] ANN search by faiss  and evaluate the result
 

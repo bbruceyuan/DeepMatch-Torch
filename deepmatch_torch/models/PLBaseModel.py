@@ -101,11 +101,13 @@ class PLBaseModel(LightningModule):
         # DeepMatch side 用于增加兼容
         self.config = config  # 增加 config 用于设置 DeepMatch 侧需要的参数
         # 优先使用 kwargs 的配置
-
         # TODO: 以后要消灭所有的 device , 
         self.config.update(kwargs)
+        
+        # 用于判断模型 输出 logits 还是 user/item 的 vector 表示
+        self.mode = self.config.get('mode', 'train')
 
-        self.linear_feature_columns = item_feature_columns + user_feature_columns
+        self.linear_feature_columns = user_feature_columns + item_feature_columns
         self.dnn_feature_columns = self.linear_feature_columns 
 
         # 在 pl 中不需要 to(device)
@@ -154,7 +156,6 @@ class PLBaseModel(LightningModule):
             batch_size (int): Batch size for torch.utils.data.DataLoader
         """
         x, y = self.construct_input(x, y)
-        
         dataset = TensorDataset(x, y)
         loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         trainer = Trainer(max_epochs=max_epochs, gpus=self.gpus)
@@ -364,3 +365,26 @@ class PLBaseModel(LightningModule):
         if include_dense:
             input_dim += dense_input_dim
         return input_dim
+
+    def rebuild_feature_index(self, feature_columns):
+        # 为了满足 单独预测 user/item vector 的需求，需要重新知道 feature_columns 的位置
+        self.feature_index = build_input_features(feature_columns)
+        return self
+
+    def full_predict(self, x, batch_size=256):
+        # 有可能直接输入的就是 tensor
+        if isinstance(x, dict):
+            x = [x[feature] for feature in self.feature_index]
+        
+        for i in range(len(x)):
+            if len(x[i].shape) == 1:
+                x[i] = np.expand_dims(x[i], axis=1)
+        x = torch.from_numpy(np.concatenate(x, axis=-1))
+        dataset = TensorDataset(x)
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        ret = []
+        for batch in loader:            
+            tmp_result = self.predict(batch[0])
+            ret.append(tmp_result)
+        return torch.cat(ret, axis=0)
+        

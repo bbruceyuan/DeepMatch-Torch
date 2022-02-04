@@ -17,13 +17,37 @@ class YouTubeDNN(PLBaseModel):
                dnn_dropout=0, activation='relu', seed=1024, **kwargs):
         super(YouTubeDNN, self).__init__(user_feature_columns, item_feature_columns, 
                 l2_reg_linear=1e-5, l2_reg_embedding=1e-5,
-                init_std=0.0001, seed=1024, task='binary', device='cpu', gpus=None, **kwargs)
+                init_std=0.0001, seed=1024, task='binary', device='cpu', **kwargs)
         self.num_sampled = num_sampled
 
         self.user_dnn = DNN(self.compute_input_dim(user_feature_columns), user_dnn_hidden_units,
                         activation=dnn_activation, init_std=init_std, device=device)
 
     def forward(self, X):
+        batch_size = X.size(0)
+        user_embedding = self.user_tower(X)
+        item_embedding = self.item_tower(X)
+
+        if self.mode == "user_representation":
+            return user_embedding
+        if self.mode == "item_representation":
+            return item_embedding
+
+        score = F.cosine_similarity(user_embedding, item_embedding, dim=-1)
+        score = score.view(batch_size, -1)
+        return score
+    
+    def item_tower(self, X):
+        if self.mode == "user_representation":
+            return None
+        
+        item_embedding_list, _ = self.input_from_item_feature_columns(X, self.item_feature_columns, self.embedding_dict)
+        item_embedding = item_embedding_list[0]  # (batch, movie_list_len, feat_dim)
+        return item_embedding
+
+    def user_tower(self, X):
+        if self.mode == "item_representation":
+            return None
         # sample softmax 可以通过 构造样本实现
         user_sparse_embedding_list, user_dense_value_list = \
             self.input_from_feature_columns(X, self.user_feature_columns, self.embedding_dict)
@@ -31,16 +55,7 @@ class YouTubeDNN(PLBaseModel):
         user_dnn_input = combined_dnn_input(user_sparse_embedding_list, user_dense_value_list)
         user_embedding = self.user_dnn(user_dnn_input)  # (batch_size, embedding_dim)
         user_embedding = user_embedding.unsqueeze(1) # (batch, 1, embedding_dim)
-
-        item_embedding_list, _ = self.input_from_item_feature_columns(X, self.item_feature_columns, self.embedding_dict)
-        # item_embedding_list 目前 size = 1
-        # random sample 几个
-        batch_size = user_embedding.size(0)
-
-        item_embedding = item_embedding_list[0]  # (batch, movie_list_len, feat_dim)
-        score = F.cosine_similarity(user_embedding, item_embedding, dim=-1)
-        score = score.view(batch_size, -1)
-        return score
+        return user_embedding
     
     def input_from_item_feature_columns(self, X, feature_columns, embedding_dict, support_dense=True):
     

@@ -67,39 +67,32 @@ if __name__ == "__main__":
     # 3.Define Model and train
 
     model = YouTubeDNN(user_feature_columns,item_feature_columns,
-                    dynamic_k=False, p=1, k_max=2, num_sampled=5,
+                    num_sampled=5,
                     user_dnn_hidden_units=(64, embedding_dim),
                     criterion=F.cross_entropy,
                 optimizer='Adam',    
                 config={
-                    'device': 'cpu'
+                    'gpus': '1'
                 }
     )  
-
     model.fit(train_model_input, train_label, 
                         max_epochs=10, batch_size=128 )
-    # model = YouTubeDNN(user_feature_columns, item_feature_columns, num_sampled=5, user_dnn_hidden_units=(64, embedding_dim))
-    #model = MIND(user_feature_columns,item_feature_columns,dynamic_k=False,p=1,k_max=2,num_sampled=5,user_dnn_hidden_units=(64, embedding_dim))
 
-    # model.compile(optimizer="adam", loss=sampledsoftmaxloss)  # "binary_crossentropy")
-    # history = model.fit(train_model_input, train_label,  # train_label,
-                        # batch_size=227, epochs=1, verbose=1, validation_split=0.0, )
-
-    exit(1)
+    # 4. Generate user features for testing and full item features for retrieval
     # 4. Generate user features for testing and full item features for retrieval
     test_user_model_input = test_model_input
-    all_item_model_input = {"movie_id": item_profile['movie_id'].values}
+    model.mode = "user_representation"
+    user_embedding_model = model
 
-    user_embedding_model = Model(inputs=model.user_input, outputs=model.user_embedding)
-    item_embedding_model = Model(inputs=model.item_input, outputs=model.item_embedding)
-
-    user_embs = user_embedding_model.predict(test_user_model_input, batch_size=2 ** 12)
-    # user_embs = user_embs[:, i, :]  # i in [0,k_max) if MIND
-    item_embs = item_embedding_model.predict(all_item_model_input, batch_size=2 ** 12)
-
+    user_embs = user_embedding_model.full_predict(test_user_model_input, batch_size=2)
     print(user_embs.shape)
-    print(item_embs.shape)
 
+    model.mode = "item_representation"
+    all_item_model_input = {"movie_id": item_profile['movie_id'].values}
+    item_embedding_model = model.rebuild_feature_index(item_feature_columns)
+    item_embs = item_embedding_model.full_predict(all_item_model_input, batch_size=2 ** 12)
+    print(item_embs.shape)
+    
     # 5. [Optional] ANN search by faiss  and evaluate the result
 
     # test_true_label = {line[0]:[line[2]] for line in test_set}

@@ -13,12 +13,18 @@ class FM(PLBaseModel):
 
     def forward(self, X):
         # (batch, N) N 表示 多列
-        # X 包括两部分，一部分是 linear part, 一部分是 
-        linear_logit = self.linear_model(X)
+        # X 包括两部分，一部分是 linear part, 一部分是 fm
+        if self.mode == 'train':
+            linear_logit = self.linear_model(X)
         #  TODO: 增加 dense_value interaction
-        sparse_embedding_list, dense_value_list = self.input_from_feature_columns(X, self.dnn_feature_columns,
-                                                                                  self.embedding_dict)
-        fm_input = torch.cat(sparse_embedding_list, dim=1)
+        user_fm_input = self.user_tower(X)
+        item_fm_input = self.item_tower(X)
+        if self.mode == "user_representation":
+            return user_fm_input
+        if self.mode == "item_representation":
+            return item_fm_input
+        
+        fm_input = torch.cat([user_fm_input, item_fm_input], dim=1)
         # 需要确定的是那些 fields 需要 intersection
         fm_logit = self.fm(fm_input)
 
@@ -26,3 +32,19 @@ class FM(PLBaseModel):
         # shape is (batch_size, 1) predict 部分进行了 squeeze 
         res = res.squeeze()
         return res
+    
+    def item_tower(self, X):
+        if self.mode == "user_representation":
+            return None
+        sparse_embedding_list, dense_value_list = self.input_from_feature_columns(X, self.item_feature_columns,
+                                                                                  self.embedding_dict)
+        fm_input = torch.cat(sparse_embedding_list, dim=1)
+        return fm_input
+
+    def user_tower(self, X):
+        if self.mode == "item_representation":
+            return None
+        sparse_embedding_list, dense_value_list = self.input_from_feature_columns(X, self.user_feature_columns,
+                                                                                  self.embedding_dict)
+        fm_input = torch.cat(sparse_embedding_list, dim=1)
+        return fm_input

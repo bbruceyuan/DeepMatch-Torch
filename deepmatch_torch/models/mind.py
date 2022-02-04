@@ -29,37 +29,21 @@ class MIND(PLBaseModel):
                         activation=dnn_activation, init_std=init_std, device=device)
 
     def forward(self, X):
-        # 找到 user_profile 相关的 feature
-        # sample softmax 可以通过 构造样本实现
-        user_sparse_feature_columns = [feat for feat in self.user_feature_columns if not feat.name.startswith("hist")]
-        user_sparse_embedding_list, user_dense_value_list = \
-            self.input_from_feature_columns(X, user_sparse_feature_columns, self.embedding_dict)
         
-        # user history 序列特征
-        user_history_feature_columns = [feat for feat in self.user_feature_columns if not feat.name.startswith("hist")]
-        histroy_feature_embedding_list, _ = self.input_from_feature_columns(X, user_history_feature_columns, self.embedding_dict)
-
-        capsule_input = histroy_feature_embedding_list[0]  # (batch, feat_embedding_dim)
-        capsule_output = self.capsule_layer(capsule_input)
-        
-        cap_cnt = capsule_output.size(1) 
-        user_dnn_input = combined_dnn_input(user_sparse_embedding_list, user_dense_value_list)
-
-        user_dnn_input = torch.tile(user_dnn_input.unsqueeze(1), [1, cap_cnt, 1])
-        user_dnn_input = torch.cat([user_dnn_input, capsule_output], dim=-1)
-
-        user_embedding = self.user_dnn(user_dnn_input)  # (batch_size, interest_cnt, embedding_dim)
-
         # user_embedding = user_embedding.unsqueeze(1) # (batch, 1, embedding_dim)
 
-        item_embedding_list, _ = self.input_from_item_feature_columns(X, self.item_feature_columns, self.embedding_dict)
-        
+        # item_embedding_list, _ = self.input_from_item_feature_columns(X, self.item_feature_columns, self.embedding_dict)
+        # item_embedding = item_embedding_list[0]  # (batch, movie_list_len, feat_dim)
+        user_embedding = self.user_tower(X)
+        item_embedding = self.item_tower(X)
+
+        if self.mode == "user_representation":
+            return user_embedding
+        if self.mode == "item_representation":
+            return item_embedding
         # item_embedding_list 目前 size = 1
         # random sample 的数量
-        batch_size = user_embedding.size(0)
-
-        item_embedding = item_embedding_list[0]  # (batch, movie_list_len, feat_dim)
-
+        batch_size = X.size(0)
         movie_list_len = item_embedding.shape[1]
 
         final_output_list = []
@@ -80,6 +64,40 @@ class MIND(PLBaseModel):
         
         return score
     
+
+    def item_tower(self, X):
+        if self.mode == "user_representation":
+            return None
+        
+        item_embedding_list, _ = self.input_from_item_feature_columns(X, self.item_feature_columns, self.embedding_dict)
+        item_embedding = item_embedding_list[0]  # (batch, movie_list_len, feat_dim)
+        return item_embedding
+
+    def user_tower(self, X):
+        if self.mode == "item_representation":
+            return None
+        # 找到 user_profile 相关的 feature
+        # sample softmax 可以通过 构造样本实现
+        user_sparse_feature_columns = [feat for feat in self.user_feature_columns if not feat.name.startswith("hist")]
+        user_sparse_embedding_list, user_dense_value_list = \
+            self.input_from_feature_columns(X, user_sparse_feature_columns, self.embedding_dict)
+        
+        # user history 序列特征
+        user_history_feature_columns = [feat for feat in self.user_feature_columns if not feat.name.startswith("hist")]
+        histroy_feature_embedding_list, _ = self.input_from_feature_columns(X, user_history_feature_columns, self.embedding_dict)
+
+        capsule_input = histroy_feature_embedding_list[0]  # (batch, feat_embedding_dim)
+        capsule_output = self.capsule_layer(capsule_input)
+        
+        cap_cnt = capsule_output.size(1) 
+        user_dnn_input = combined_dnn_input(user_sparse_embedding_list, user_dense_value_list)
+
+        user_dnn_input = torch.tile(user_dnn_input.unsqueeze(1), [1, cap_cnt, 1])
+        user_dnn_input = torch.cat([user_dnn_input, capsule_output], dim=-1)
+
+        user_embedding = self.user_dnn(user_dnn_input)  # (batch_size, interest_cnt, embedding_dim)
+        return user_embedding
+
     def input_from_item_feature_columns(self, X, feature_columns, embedding_dict, support_dense=True):
     
         sparse_feature_columns = list(
