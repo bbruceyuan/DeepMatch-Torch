@@ -7,8 +7,6 @@ from deepmatch_torch.models import FM, DSSM, NCF, YouTubeDNN
 from deepctr_torch.inputs import SparseFeat, VarLenSparseFeat
 from preprocess import gen_data_set_youteube, gen_model_input, gen_data_set
 from sklearn.preprocessing import LabelEncoder
-from tensorflow.python.keras import backend as K
-from tensorflow.python.keras.models import Model
 import torch.nn.functional as F
 
 
