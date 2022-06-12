@@ -3,11 +3,10 @@ import torch
 
 
 def concat_fun(inputs, axis=-1):
-    def concat_fun(inputs, axis=-1):
-        if len(inputs) == 1:
-            return inputs[0]
-        else:
-            return torch.cat(inputs, dim=axis)
+    if len(inputs) == 1:
+        return inputs[0]
+    else:
+        return torch.cat(inputs, dim=axis)
 
 def combined_dnn_input(sparse_embedding_list, dense_value_list=[]):
     if len(sparse_embedding_list) > 0 and len(dense_value_list) > 0:
