@@ -8,9 +8,9 @@ from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 import torch
 import torch.nn as nn
-from deepctr_torch.inputs import build_input_features
-from deepctr_torch.inputs import varlen_embedding_lookup, get_varlen_pooling_list
-from deepctr_torch.inputs import SparseFeat, DenseFeat, VarLenSparseFeat
+from ..inputs import build_input_features
+from ..inputs import varlen_embedding_lookup, get_varlen_pooling_list
+from ..inputs import SparseFeat, DenseFeat, VarLenSparseFeat
 from ..inputs import create_embedding_matrix
 
 

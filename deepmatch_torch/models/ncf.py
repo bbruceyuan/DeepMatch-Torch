@@ -1,7 +1,7 @@
-from deepctr_torch.inputs import create_embedding_matrix
+from ..inputs import create_embedding_matrix
 
-from deepctr_torch.inputs  import SparseFeat, DenseFeat, build_input_features
-from deepctr_torch.layers.core import DNN
+from ..inputs  import SparseFeat, DenseFeat, build_input_features
+from ..layers.core import DNN
 
 from .PLBaseModel import PLBaseModel
 from ..utils import combined_dnn_input

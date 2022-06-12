@@ -1,7 +1,7 @@
 from .PLBaseModel import PLBaseModel
-from deepctr_torch.layers import DNN
-from deepctr_torch.inputs import SparseFeat, DenseFeat, VarLenSparseFeat
-from deepctr_torch.inputs import get_varlen_pooling_list, varlen_embedding_lookup
+from ..layers.core import DNN
+from ..inputs import SparseFeat, DenseFeat, VarLenSparseFeat
+from ..inputs import get_varlen_pooling_list, varlen_embedding_lookup
 from ..utils import combined_dnn_input
 from ..inputs import create_embedding_matrix
 import torch.nn.functional as F

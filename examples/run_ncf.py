@@ -2,7 +2,7 @@ import sys
 sys.path.append("../")
 
 import pandas as pd
-from deepctr_torch.inputs import SparseFeat, VarLenSparseFeat
+from deepmatch_torch.inputs import SparseFeat, VarLenSparseFeat
 from preprocess import gen_data_set, gen_model_input
 from sklearn.preprocessing import LabelEncoder
 from deepmatch_torch.models import FM, NCF, DSSM

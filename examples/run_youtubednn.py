@@ -4,7 +4,7 @@ sys.path.append("../")
 import pandas as pd
 from deepmatch_torch.models import FM, DSSM, NCF, YouTubeDNN
 
-from deepctr_torch.inputs import SparseFeat, VarLenSparseFeat
+from deepmatch_torch.inputs import SparseFeat, VarLenSparseFeat
 from preprocess import gen_data_set_youteube, gen_model_input, gen_data_set
 from sklearn.preprocessing import LabelEncoder
 import torch.nn.functional as F

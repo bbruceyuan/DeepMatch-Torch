@@ -4,7 +4,7 @@ sys.path.append("../")
 
 import pandas as pd
 # TODO:: 后续修改成 deepmatch_torch.inputs 中的 Feature
-from deepctr_torch.inputs import SparseFeat, VarLenSparseFeat
+from deepmatch_torch.inputs import SparseFeat, VarLenSparseFeat
 from preprocess import gen_data_set, gen_model_input
 from sklearn.preprocessing import LabelEncoder
 from deepmatch_torch.models import FM, DSSM
@@ -58,21 +58,21 @@ if __name__ == "__main__":
 
     # 3.Define Model and train
 
-    # model = DSSM(user_feature_columns, 
-    #     item_feature_columns, 
-    #     dnn_hidden_units=[128, 52],
-    #     optimizer='Adam',
-    #     config={
-    #         'gpus': 1
-    #         }
-    #     )  
-    model = FM(user_feature_columns, 
+    model = DSSM(user_feature_columns, 
         item_feature_columns, 
+        dnn_hidden_units=[128, 52],
         optimizer='Adam',
         config={
-            'gpus': '1'
-        }
-    )  
+            'gpus': 1
+            }
+        )  
+    # model = FM(user_feature_columns, 
+    #     item_feature_columns, 
+    #     optimizer='Adam',
+    #     config={
+    #         'gpus': '1'
+    #     }
+    # )  
     
     model.fit(train_model_input, train_label, 
                         max_epochs=1, batch_size=128 )

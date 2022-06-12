@@ -2,7 +2,7 @@
 import torch.nn.functional as F
 
 from .PLBaseModel import PLBaseModel
-from deepctr_torch.layers import DNN
+from ..layers.core import DNN
 from ..utils import combined_dnn_input
 
 
