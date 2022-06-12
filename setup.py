@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 # 去除了 PyTorch 的依赖，需要用户自己自己下载
 REQUIRED_PACKAGES = [
-    'tqdm', 'sklearn'
+    'tqdm', 'sklearn', 'deepctr-torch', 'tensorflow', 'pytorch-lightning'
 ]
 
 setuptools.setup(
